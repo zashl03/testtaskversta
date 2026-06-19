@@ -1,0 +1,52 @@
+services:
+  frontend:
+    build:
+      context: ./client
+      target: final
+    container_name: versta-frontend
+    ports:
+      - "8080:3000"
+    depends_on:
+      - backend
+    networks:
+      - versta-network
+
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: versta-backend
+    ports:
+      - "5000:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=${DB_CONNECTION_STRING}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - versta-network
+
+  db:
+    image: postgres:17-alpine
+    container_name: versta-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - versta-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  versta-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
